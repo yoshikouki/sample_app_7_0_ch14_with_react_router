@@ -14,7 +14,7 @@
 
 ### 1. フロントエンドプロジェクトの作成
 
-[Installation | React Router](https://reactrouter.com/start/framework/installation) に従って React Router を導入します。
+[Installation | React Router](https://reactrouter.com/start/framework/installation) に沿って React Router を導入します。
 
 ```bash
 npx create-react-router@latest frontend
@@ -24,8 +24,10 @@ npx create-react-router@latest frontend
 
 [React Router の SPA Mode](https://reactrouter.com/how-to/spa) を設定
 
-```diff
-
+```diff:frontend/react-router.config.ts
+-  ssr: true,
++  ssr: false,
+} satisfies Config;
 ```
 
 React Router へのアクセスを Rails サーバーにプロキシするように設定
