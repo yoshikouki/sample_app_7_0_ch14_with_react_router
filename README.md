@@ -1,35 +1,37 @@
-# Ruby on Rails チュートリアルのサンプルアプリケーション
+# Ruby on Rails チュートリアルのサンプルアプリケーション with React Router
 
-これは、次の教材で作られたサンプルアプリケーションです。
-[*Ruby on Rails チュートリアル*](https://railstutorial.jp/)
-（第7版）
-[Michael Hartl](https://www.michaelhartl.com/) 著
+このリポジトリは [yasslab/sample_app のサンプルアプリケーション (第7版 第14章)](https://github.com/yasslab/sample_apps/tree/main/7_0/ch14) を React Router で動かすためのリポジトリです。
 
-## ライセンス
+## 概要
 
-[Ruby on Rails チュートリアル](https://railstutorial.jp/)内にある
-ソースコードはMITライセンスとBeerwareライセンスのもとで公開されています。
-詳細は [LICENSE.md](LICENSE.md) をご覧ください。
+- [SPA Mode の React Router](https://reactrouter.com/how-to/pre-rendering#pre-rendering-with-ssrfalse) で動かします
+  - 開発環境は React Router (Vite dev server proxy) 経由で Rails サーバーにアクセスします
+  - 本番環境は React Router (Vite build) で静的ファイルを生成し、Rails サーバーの静的ファイルとして配置 (public 配下) & 配信します
+- Ruby on Rails で作ったロジックはそのまま利用します
+- Ruby on Rails の View は利用せず、React Router でリビルドします
 
-## 使い方
+## React Router の導入
 
-このアプリケーションを動かす場合は、まずはリポジトリをフォークしてください。
+### 1. フロントエンドプロジェクトの作成
 
-フォークしたリポジトリで、「Code」から「Codespaces」タブに移動し、
-「Create codespace on main」をクリックすると環境構築がスタートします。
-Railsサーバーが立ち上がり、シンプルブラウザが表示されるまでしばらくお待ちください。
+[Installation | React Router](https://reactrouter.com/start/framework/installation) に従って React Router を導入します。
 
-次に、データベースへのマイグレーションを実行します。
-
-```
-$ rails db:migrate
+```bash
+npx create-react-router@latest frontend
 ```
 
-最後に、テストを実行してうまく動いているかどうか確認してください。
+### 2. フロントエンドプロジェクトの設定
+
+[React Router の SPA Mode](https://reactrouter.com/how-to/spa) を設定
+
+```diff
 
 ```
-$ rails test
+
+React Router へのアクセスを Rails サーバーにプロキシするように設定
+
+```diff
+
 ```
 
-詳しくは、[*Ruby on Rails チュートリアル*](https://railstutorial.jp/)
-を参考にしてください。
+
