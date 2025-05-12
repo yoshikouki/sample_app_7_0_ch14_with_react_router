@@ -5,8 +5,8 @@
 ## 概要
 
 - [SPA Mode の React Router](https://reactrouter.com/how-to/pre-rendering#pre-rendering-with-ssrfalse) で動かします
-  - 開発環境は React Router （Vite dev server proxy） 経由で Rails サーバーにアクセスします
-  - 本番環境は React Router （Vite build） で静的ファイルを生成し、Rails サーバーの静的ファイルとして配置 （public 配下） & 配信します
+  - 開発環境は React Router(Vite dev server proxy)経由で Rails サーバーにアクセスします
+  - 本番環境は React Router(Vite build)で静的ファイルを生成し、Rails サーバーの静的ファイルとして配置(public 配下) & 配信します
 - Ruby on Rails で作ったロジックはそのまま利用します
 - Ruby on Rails の View は利用せず、React Router でリビルドします
 
@@ -30,38 +30,12 @@ npx create-react-router@latest frontend
 } satisfies Config;
 ```
 
-React Router へのアクセスを Rails サーバーにプロキシするように設定
-
-```diff:frontend/vite.config.ts
-import { reactRouter } from "@react-router/dev/vite";
-import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
-
-export default defineConfig({
-  plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
-+  server: {
-+    proxy: {
-+      "/api": "http://localhost:3000",
-+      "/users": "http://localhost:3000",
-+      "/login": "http://localhost:3000",
-+      "/logout": "http://localhost:3000",
-+      "/microposts": "http://localhost:3000",
-+      "/relationships": "http://localhost:3000",
-+    },
-+  },
-});
-```
-
 ### 3. 開発環境の起動
 
 フロントエンドとバックエンドを別々に起動します。
 
 ```bash
-# Rails サーバーを起動（バックエンド）
-bin/rails server
-
-# 別ターミナルで React Router を起動（フロントエンド）
+# React Router の起動確認
 cd frontend
 npm run dev
 ```
@@ -70,9 +44,17 @@ npm run dev
 
 Rails のルーティングに合わせて React Router のルーティングを設定します。
 
+```tsx:frontend/app/routes.ts
+import { type RouteConfig, index, route } from "@react-router/dev/routes";
+
+export default [
+  index("routes/home.tsx"),
+  route("/signup", "routes/signup.tsx"),
+] satisfies RouteConfig;
+```
+
 ```tsx:frontend/app/routes/home.tsx
 import type { Route } from "./+types/home";
-import { Welcome } from "../welcome/welcome";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -86,9 +68,9 @@ export default function Home() {
     <div className="center jumbotron">
       <h1>Welcome to the Sample App</h1>
       <p>
-        This is the home page for the
+        This is the home page for the{" "}
         <a href="https://railstutorial.jp/">Ruby on Rails Tutorial</a>
-        sample application.
+        {" "}sample application.
       </p>
       <a href="/signup" className="btn btn-lg btn-primary">Sign up now!</a>
     </div>
@@ -96,9 +78,23 @@ export default function Home() {
 }
 ```
 
+### 重要：ルーティングの重複に関する注意
+
+Rails と React Router のルーティングが重複すると、意図しない動作が発生する可能性があります。以下の点に注意してください：
+
+- React Router の開発サーバーで設定したプロキシパスと同じパスを React Router のルーティングにも設定すると、React Router が優先され Rails のエンドポイントにリクエストが到達しない場合があります
+- `/users` のようなパスが Rails と React Router の両方に存在する場合、開発環境では設定によって異なる挙動になる可能性があります
+- 本番環境では、すべてのルーティングを適切に設計し、Rails API と React Router のフロントエンドの役割分担を明確にしてください
+
+このような問題を避けるため、次のいずれかの方法を検討してください：
+- Rails API 用のパスに `/api` プレフィックスを付ける（例：`/api/users`）
+- React Router のルートパスに接頭辞を付ける（例：`/app/*`）
+- 明確な API 呼び出しと UI ルーティングのガイドラインを設けて厳格に従う
+
 ### 5. API との連携
 
 Rails のコントローラーを API として利用するための設定を行います。
+この設定はセキュリティリスクを伴います。本番環境ではリスク評価を行った上で対策を講じてください。
 
 ```ruby:app/controllers/application_controller.rb
 class ApplicationController < ActionController::Base
@@ -116,6 +112,28 @@ class ApplicationController < ActionController::Base
   # ...
 end
 ```
+
+```ruby:config/routes.rb
+```
+
+React Router へのアクセスを Rails サーバーにプロキシするように設定 (開発環境用の設定)
+
+```diff:frontend/vite.config.ts
+import { reactRouter } from "@react-router/dev/vite";
+import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
+
+export default defineConfig({
+  plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
++  server: {
++    proxy: {
++      "/api": "http://localhost:3000",
++    },
++  },
+});
+```
+
 
 ### 6. 本番環境のためのビルド設定
 
@@ -158,3 +176,40 @@ cd ..
 - [Vite ドキュメント](https://vitejs.dev/)
 
 
+
+## 開発サーバーを起動するための Procfile.dev を作成
+
+```bin/dev
+#!/usr/bin/env sh
+
+if ! gem list foreman -i --silent; then
+  echo "Installing foreman..."
+  gem install foreman
+fi
+
+# Default to port 3000 if not specified
+export PORT="${PORT:-3000}"
+
+# Let the debug gem allow remote connections,
+# but avoid loading until `debugger` is called
+export RUBY_DEBUG_OPEN="true"
+export RUBY_DEBUG_LAZY="true"
+
+exec foreman start -f Procfile.dev "$@"
+```
+
+```Procfile.dev
+web: bin/rails server
+frontend: cd frontend && pnpm run dev
+```
+
+```bash
+# 初回のみ
+chmod +x ./bin/dev
+bin/dev
+
+# 2回目以降
+bin/dev
+```
+
+参考: https://zenn.dev/ykpythemind/articles/78586345df229b#procfile%E3%82%92%E4%BD%9C%E6%88%90(optional)
