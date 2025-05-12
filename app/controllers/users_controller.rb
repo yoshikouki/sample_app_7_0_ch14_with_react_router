@@ -6,11 +6,27 @@ class UsersController < ApplicationController
 
   def index
     @users = User.paginate(page: params[:page])
+    respond_to do |format|
+      format.html
+      format.json { render json: @users }
+    end
   end
 
   def show
     @user = User.find(params[:id])
     @microposts = @user.microposts.paginate(page: params[:page])
+
+    user_data = @user.as_json(
+      only: [:id, :name, :email, :created_at, :updated_at],
+      methods: [:microposts_count, :following_count, :followers_count]
+    )
+
+    user_data[:following] = logged_in? ? current_user.following?(@user) : false
+
+    respond_to do |format|
+      format.html
+      format.json { render json: user_data }
+    end
   end
 
   def new
@@ -24,7 +40,10 @@ class UsersController < ApplicationController
       flash[:info] = "Please check your email to activate your account."
       redirect_to root_url
     else
-      render 'new', status: :unprocessable_entity
+      respond_to do |format|
+        format.html { render 'new', status: :unprocessable_entity }
+        format.json { render json: { errors: @user.errors }, status: :unprocessable_entity }
+      end
     end
   end
 
@@ -60,6 +79,15 @@ class UsersController < ApplicationController
     @user  = User.find(params[:id])
     @users = @user.followers.paginate(page: params[:page])
     render 'show_follow'
+  end
+
+  def microposts
+    user = User.find(params[:id])
+    microposts = user.microposts.paginate(page: params[:page])
+
+    respond_to do |format|
+      format.json { render json: microposts.as_json(include: { user: { only: [:id, :name] } }) }
+    end
   end
 
   private

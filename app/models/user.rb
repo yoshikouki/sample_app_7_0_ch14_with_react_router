@@ -108,6 +108,21 @@ class User < ApplicationRecord
     following.include?(other_user)
   end
 
+  # 投稿数を返す
+  def microposts_count
+    microposts.count
+  end
+
+  # フォロー数を返す
+  def following_count
+    following.count
+  end
+
+  # フォロワー数を返す
+  def followers_count
+    followers.count
+  end
+
   private
 
     # メールアドレスをすべて小文字にする

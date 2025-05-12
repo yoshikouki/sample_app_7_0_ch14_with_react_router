@@ -7,20 +7,35 @@ class MicropostsController < ApplicationController
     @micropost.image.attach(params[:micropost][:image])
     if @micropost.save
       flash[:success] = "Micropost created!"
-      redirect_to root_url
+
+      respond_to do |format|
+        format.html { redirect_to root_url }
+        format.json { render json: @micropost, status: :created }
+      end
     else
       @feed_items = current_user.feed.paginate(page: params[:page])
-      render 'static_pages/home', status: :unprocessable_entity
+
+      respond_to do |format|
+        format.html { render 'static_pages/home', status: :unprocessable_entity }
+        format.json { render json: { errors: @micropost.errors }, status: :unprocessable_entity }
+      end
     end
   end
 
   def destroy
     @micropost.destroy
     flash[:success] = "Micropost deleted"
-    if request.referrer.nil? || request.referrer == microposts_url
-      redirect_to root_url, status: :see_other
-    else
-      redirect_to request.referrer, status: :see_other
+
+    respond_to do |format|
+      format.html do
+        if request.referrer.nil? || request.referrer == microposts_url
+          redirect_to root_url, status: :see_other
+        else
+          redirect_to request.referrer, status: :see_other
+        end
+      end
+
+      format.json { head :no_content }
     end
   end
 
@@ -32,6 +47,10 @@ class MicropostsController < ApplicationController
 
     def correct_user
       @micropost = current_user.microposts.find_by(id: params[:id])
-      redirect_to root_url, status: :see_other if @micropost.nil?
+
+      respond_to do |format|
+        format.html { redirect_to root_url, status: :see_other if @micropost.nil? }
+        format.json { render json: { error: "Not authorized" }, status: :forbidden if @micropost.nil? }
+      end
     end
 end
