@@ -26,7 +26,7 @@ export default function Users() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch(`/users.json?page=${page}`);
+        const response = await fetch(`/api/users?page=${page}`);
         if (!response.ok) {
           throw new Error("Failed to fetch users");
         }

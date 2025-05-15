@@ -27,7 +27,7 @@ export default function NewMicropost() {
         formData.append("micropost[image]", fileInputRef.current.files[0]);
       }
       
-      const response = await fetch("/microposts", {
+      const response = await fetch("/api/microposts", {
         method: "POST",
         body: formData,
       });

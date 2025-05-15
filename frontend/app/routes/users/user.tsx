@@ -41,7 +41,7 @@ export default function UserProfile() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await fetch(`/users/${id}.json`);
+        const response = await fetch(`/api/users/${id}`);
         if (!response.ok) {
           throw new Error("Failed to fetch user data");
         }
@@ -57,7 +57,7 @@ export default function UserProfile() {
 
     const fetchMicroposts = async () => {
       try {
-        const response = await fetch(`/users/${id}/microposts.json?page=${page}`);
+        const response = await fetch(`/api/users/${id}/microposts?page=${page}`);
         if (!response.ok) {
           throw new Error("Failed to fetch microposts");
         }
@@ -89,7 +89,7 @@ export default function UserProfile() {
   const handleFollow = async () => {
     try {
       const method = following ? "DELETE" : "POST";
-      const response = await fetch(`/relationships`, {
+      const response = await fetch(`/api/relationships`, {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -102,7 +102,7 @@ export default function UserProfile() {
       if (response.ok) {
         setFollowing(!following);
         // ユーザー情報を更新してフォロワー数を反映
-        const userResponse = await fetch(`/users/${id}.json`);
+        const userResponse = await fetch(`/api/users/${id}`);
         if (userResponse.ok) {
           const userData = await userResponse.json();
           setUser(userData);

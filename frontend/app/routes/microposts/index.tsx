@@ -78,7 +78,7 @@ export default function MicropostIndex() {
 
   const handleDelete = async (id: number) => {
     try {
-      const response = await fetch(`/microposts/${id}`, {
+      const response = await fetch(`/api/microposts/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
