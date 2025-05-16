@@ -2,7 +2,7 @@
 
 このリポジトリは [yasslab/sample_app のサンプルアプリケーション (第7版 第14章)](https://github.com/yasslab/sample_apps/tree/main/7_0/ch14) を React Router で動かすためのリポジトリです。
 
-## 概要
+### 概要
 
 - [SPA Mode の React Router](https://reactrouter.com/how-to/pre-rendering#pre-rendering-with-ssrfalse) で動かします
   - 開発環境は React Router(Vite dev server proxy)経由で Rails サーバーにアクセスします
@@ -10,9 +10,9 @@
 - Ruby on Rails で作ったロジックはそのまま利用します
 - Ruby on Rails の View は利用せず、React Router でリビルドします
 
-## React Router の導入
+### React Router の導入
 
-### 1. フロントエンドプロジェクトの作成
+#### 1. フロントエンドプロジェクトの作成
 
 [Installation | React Router](https://reactrouter.com/start/framework/installation) に沿って React Router を導入します。
 
@@ -20,7 +20,7 @@
 npx create-react-router@latest frontend
 ```
 
-### 2. フロントエンドプロジェクトの設定
+#### 2. フロントエンドプロジェクトの設定
 
 [React Router の SPA Mode](https://reactrouter.com/how-to/spa) を設定
 
@@ -30,7 +30,7 @@ npx create-react-router@latest frontend
 } satisfies Config;
 ```
 
-### 3. 開発環境の起動
+#### 3. 開発環境の起動
 
 フロントエンドとバックエンドを別々に起動します。
 
@@ -40,16 +40,15 @@ cd frontend
 npm run dev
 ```
 
-### 4. React Router のルーティング設定
+#### 4. React Router のルーティング設定
 
-Rails のルーティングに合わせて React Router のルーティングを設定します。
+React Router のルーティングを設定します。
 
 ```tsx:frontend/app/routes.ts
 import { type RouteConfig, index, route } from "@react-router/dev/routes";
 
 export default [
   index("routes/home.tsx"),
-  route("/signup", "routes/signup.tsx"),
 ] satisfies RouteConfig;
 ```
 
@@ -78,9 +77,9 @@ export default function Home() {
 }
 ```
 
-### 重要：ルーティングの重複に関する注意
+#### 重要：ルーティングの重複に関する注意
 
-Rails と React Router のルーティングが重複すると、意図しない動作が発生する可能性があります。以下の点に注意してください：
+Rails と React Router のルーティングが重複すると、とくに本番環境で意図しない動作が発生する可能性があります。以下の点に注意してください：
 
 - React Router の開発サーバーで設定したプロキシパスと同じパスを React Router のルーティングにも設定すると、React Router が優先され Rails のエンドポイントにリクエストが到達しない場合があります
 - `/users` のようなパスが Rails と React Router の両方に存在する場合、開発環境では設定によって異なる挙動になる可能性があります
@@ -91,10 +90,63 @@ Rails と React Router のルーティングが重複すると、意図しない
 - React Router のルートパスに接頭辞を付ける（例：`/app/*`）
 - 明確な API 呼び出しと UI ルーティングのガイドラインを設けて厳格に従う
 
-### 5. API との連携
+#### 5. API との連携
 
 Rails のコントローラーを API として利用するための設定を行います。
 この設定はセキュリティリスクを伴います。本番環境ではリスク評価を行った上で対策を講じてください。
+
+```ruby:config/routes.rb
+Rails.application.routes.draw do
+  get    "/help",    to: "static_pages#help"
+  get    "/about",   to: "static_pages#about"
+  get    "/contact", to: "static_pages#contact"
+  get    "/signup",  to: "users#new"
+  get    "/login",   to: "sessions#new"
+  post   "/login",   to: "sessions#create"
+  delete "/logout",  to: "sessions#destroy"
+  resources :account_activations, only: [:edit]
+  resources :password_resets,     only: [:new, :create, :edit, :update]
+
+  namespace :api do
+    resources :users do
+      member do
+        get :following, :followers
+      end
+    end
+    resources :microposts,          only: [:create, :destroy]
+    resources :relationships,       only: [:create, :destroy]
+    get '/microposts', to: 'static_pages#home'
+  end
+end
+```
+
+React Router へのアクセスを Rails サーバーにプロキシするように設定 (開発環境用の設定)
+
+```ts:frontend/vite.config.ts
+import { reactRouter } from "@react-router/dev/vite";
+import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
+
+export default defineConfig({
+  plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
+  server: {
+    proxy: {
+      "/api": "http://localhost:3000",
+      "/help": "http://localhost:3000",
+      "/about": "http://localhost:3000",
+      "/contact": "http://localhost:3000",
+      "/signup": "http://localhost:3000",
+      "/login": "http://localhost:3000",
+      "/logout": "http://localhost:3000",
+      "/account_activations": "http://localhost:3000",
+      "/password_resets": "http://localhost:3000",
+    },
+  },
+});
+```
+
+API リクエスト (JSON) に対して CSRF トークン検証をスキップするための設定
 
 ```ruby:app/controllers/application_controller.rb
 class ApplicationController < ActionController::Base
@@ -113,29 +165,7 @@ class ApplicationController < ActionController::Base
 end
 ```
 
-```ruby:config/routes.rb
-```
-
-React Router へのアクセスを Rails サーバーにプロキシするように設定 (開発環境用の設定)
-
-```diff:frontend/vite.config.ts
-import { reactRouter } from "@react-router/dev/vite";
-import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
-
-export default defineConfig({
-  plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
-+  server: {
-+    proxy: {
-+      "/api": "http://localhost:3000",
-+    },
-+  },
-});
-```
-
-
-### 6. 本番環境のためのビルド設定
+#### 6. 本番環境のためのビルド設定
 
 React Router のビルド結果を Rails の public ディレクトリに配置します。
 
@@ -149,7 +179,7 @@ React Router のビルド結果を Rails の public ディレクトリに配置�
   },
 ```
 
-### 7. デプロイ手順
+#### 7. デプロイ手順
 
 本番環境へのデプロイ時には、Rails アプリケーションのデプロイ前に React Router のビルドを実行します。
 
@@ -163,13 +193,13 @@ cd ..
 # ここに通常の Rails デプロイコマンドを記述
 ```
 
-## 動作確認
+### 動作確認
 
 1. Rails サーバーと React Router の開発サーバーを起動
 2. ブラウザで http://localhost:5173 にアクセス（React Router の開発サーバー）
 3. Rails の機能（ログイン、投稿など）が React Router 経由で利用できることを確認
 
-## 参考資料
+### 参考資料
 
 - [Ruby on Rails チュートリアル](https://railstutorial.jp/)
 - [React Router ドキュメント](https://reactrouter.com/)
@@ -177,7 +207,7 @@ cd ..
 
 
 
-## 開発サーバーを起動するための Procfile.dev を作成
+### 開発サーバーを起動するための Procfile.dev を作成
 
 ```bin/dev
 #!/usr/bin/env sh
